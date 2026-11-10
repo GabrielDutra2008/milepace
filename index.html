@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>MilePace — Running Coach</title>
+<style>
+:root{--bg:#0b1220;--panel:#121e30;--panel2:#1a2940;--text:#f3f6fb;--muted:#9aabc2;--line:#2a3a52;--green:#37d39a;--yellow:#f4c65e;--red:#ff7777;--blue:#7db7ff}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#101b2c,#0b1220 45%);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh}
+main{max-width:620px;margin:auto;padding:20px 16px 44px}.top{display:flex;justify-content:space-between;align-items:center;margin:4px 0 18px}.brand{font-weight:850;letter-spacing:.14em;font-size:17px}.sub{font-size:12px;color:var(--muted);margin-top:3px}.pill{border:1px solid var(--line);border-radius:99px;padding:7px 11px;color:var(--muted);font-size:12px}
+.card{background:rgba(18,30,48,.96);border:1px solid var(--line);border-radius:20px;padding:17px;margin:13px 0;box-shadow:0 12px 32px #0002}
+h2{font-size:17px;margin:0 0 14px}h3{font-size:14px;margin:0 0 9px;color:#dce7f6}
+label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px}
+input{width:100%;background:#0c1727;color:var(--text);border:1px solid #34465f;border-radius:11px;padding:12px;font:inherit;min-width:0}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:12px}.targetrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.metricgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:var(--panel2);border-radius:14px;padding:13px}.metric .v{font-size:clamp(25px,7vw,34px);font-weight:780;letter-spacing:-.04em;font-variant-numeric:tabular-nums}.metric .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.bigdistance{text-align:center;padding:7px 0 15px}.bigdistance .v{font-size:58px;line-height:1.05;font-weight:820;letter-spacing:-.06em;font-variant-numeric:tabular-nums}.bigdistance .k{font-size:11px;color:var(--muted);letter-spacing:.13em}
+.status{padding:13px;border-radius:13px;text-align:center;font-weight:800;letter-spacing:.04em;background:#183c35;color:var(--green);margin:12px 0 0}.status.behind{background:#46252c;color:var(--red)}.status.ahead{background:#40371e;color:var(--yellow)}.status.idle{background:#1a2940;color:#c4d3e8}
+button{border:0;border-radius:13px;padding:14px 16px;font:700 15px system-ui;cursor:pointer;color:#07140f;background:var(--green);width:100%}button:disabled{opacity:.45;cursor:not-allowed}.start{font-size:18px;padding:18px;margin-top:14px}.finish{background:var(--red);color:#26090d}.secondary{background:#263750;color:var(--text);border:1px solid #3b506d}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.smallbtn{font-size:13px;padding:11px}
+.progress{height:9px;background:#293950;border-radius:99px;overflow:hidden;margin-top:8px}.bar{height:100%;background:var(--green);width:0%;transition:width .2s}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.muted{color:var(--muted);font-size:12px}.split{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}.split:last-child{border:0}
+.historyitem{border:1px solid var(--line);border-radius:13px;padding:12px;margin:9px 0;background:#0e1929}.historyitem strong{font-variant-numeric:tabular-nums}.tag{font-size:11px;border-radius:99px;padding:4px 8px;background:#183c35;color:var(--green)}.tag.bad{background:#46252c;color:var(--red)}
+.empty{color:var(--muted);font-size:13px;text-align:center;padding:18px 6px}
+canvas{width:100%;height:180px;display:block}
+.note{font-size:12px;color:var(--muted);line-height:1.5}.hidden{display:none!important}
+@media(max-width:380px){main{padding:14px 11px}.card{padding:14px}.bigdistance .v{font-size:50px}}
+</style>
+</head>
+<body>
+<main>
+ <div class="top"><div><div class="brand">MILEPACE</div><div class="sub">Your personal running pace coach</div></div><div class="pill" id="gpsPill">GPS not started</div></div>
+
+ <section class="card">
+  <h2>Run setup</h2>
+  <div class="settings">
+   <div><label for="targetMin">Target mile time — minutes</label><input id="targetMin" type="number" min="0" max="30" value="8" inputmode="numeric"></div>
+   <div><label for="targetSec">Target mile time — seconds</label><input id="targetSec" type="number" min="0" max="59" value="0" inputmode="numeric"></div>
+  </div>
+  <p class="note" style="margin:10px 0 0">Example: 8 minutes and 0 seconds means your goal is to complete each mile in 8:00.</p>
+ </section>
+
+ <section class="card">
+  <div class="row"><h2 style="margin:0">Live run</h2><span class="pill" id="runState">Ready</span></div>
+  <div class="bigdistance"><div class="v" id="distance">0.00</div><div class="k">MILES</div></div>
+  <div class="metricgrid">
+   <div class="metric"><div class="v" id="elapsed">0:00</div><div class="k">Elapsed time</div></div>
+   <div class="metric"><div class="v" id="pace">—:—</div><div class="k">Current pace / mile</div></div>
+   <div class="metric"><div class="v" id="targetPace">8:00</div><div class="k">Target pace / mile</div></div>
+   <div class="metric"><div class="v" id="projected">—:—</div><div class="k">Projected mile time</div></div>
+  </div>
+  <div class="row" style="margin-top:14px"><span class="muted">Progress to next mile</span><strong id="mileProgressText">0%</strong></div>
+  <div class="progress"><div class="bar" id="mileProgress"></div></div>
+  <div id="paceStatus" class="status idle">READY WHEN YOU ARE</div>
+  <button id="mainButton" class="start">▶ START RUN</button>
+  <div class="actions">
+   <button id="pauseButton" class="secondary smallbtn" disabled>Pause</button>
+   <button id="resetButton" class="secondary smallbtn">Reset display</button>
+  </div>
+  <p class="note" id="gpsMessage" style="margin-bottom:0">GPS starts when you press Start. Allow location access when your browser asks.</p>
+ </section>
+
+ <section class="card">
+  <div class="row"><h2 style="margin:0">This run's mile splits</h2><span class="pill" id="splitCount">0 saved</span></div>
+  <div id="splits"><div class="empty">Completed miles will appear here automatically.</div></div>
+ </section>
+
+ <section class="card">
+  <div class="row"><h2 style="margin:0">Performance overview</h2><span class="pill" id="runCount">0 runs</span></div>
+  <div class="metricgrid" style="margin-top:13px">
+   <div class="metric"><div class="v" id="bestMile">—:—</div><div class="k">Personal best mile</div></div>
+   <div class="metric"><div class="v" id="avgMile">—:—</div><div class="k">Average completed mile</div></div>
+   <div class="metric"><div class="v" id="totalMiles">0.00</div><div class="k">Total miles recorded</div></div>
+   <div class="metric"><div class="v" id="bestRun">—:—</div><div class="k">Fastest full mile run</div></div>
+  </div>
+  <h3 style="margin-top:18px">Mile-time trend</h3>
+  <canvas id="trend" width="560" height="180"></canvas>
+  <div id="history"><div class="empty">Finish a run to start building your history.</div></div>
+  <div class="actions">
+   <button id="exportButton" class="secondary smallbtn">Export backup</button>
+   <button id="clearButton" class="secondary smallbtn">Clear all history</button>
+  </div>
+  <p class="note" style="margin-bottom:0">Records are stored only in this browser on this phone. Export a backup before clearing browser data or changing phones.</p>
+ </section>
+ <p class="note">GPS accuracy varies. For reliable tracking, use the app outdoors, allow location access, and keep this page open while running. This app is a training aid, not an official race timer.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const DB_KEY='milepace_local_v1';
+let records=loadRecords(), running=false, paused=false, watchId=null, startAt=0, elapsedBefore=0, timer=null, lastFix=null, distanceM=0, splits=[], lastSplitAt=0, currentPace=null, wakeLock=null;
+function loadRecords(){try{return JSON.parse(localStorage.getItem(DB_KEY)||'[]')}catch(e){return []}}
+function persist(){try{localStorage.setItem(DB_KEY,JSON.stringify(records));}catch(e){alert('Could not save history. Your phone browser storage may be full. Export your history if possible.');}}
+function fmt(sec){if(!Number.isFinite(sec)||sec<0)return '—:—';sec=Math.round(sec);return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0')}
+function targetSeconds(){let m=Math.max(0,Number($('targetMin').value)||0),s=Math.min(59,Math.max(0,Number($('targetSec').value)||0));return m*60+s}
+function elapsed(){return elapsedBefore+(running&&!paused?(Date.now()-startAt)/1000:0)}
+function haversine(a,b){const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon),x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function setGPS(t){$('gpsPill').textContent=t}
+function setStatus(text,kind){$('paceStatus').textContent=text;$('paceStatus').className='status '+kind}
+function updateUI(){
+ const sec=elapsed(),mi=distanceM/1609.344,t=targetSeconds();
+ $('distance').textContent=mi.toFixed(2);$('elapsed').textContent=fmt(sec);$('targetPace').textContent=fmt(t);
+ const frac=mi-Math.floor(mi);$('mileProgress').style.width=(frac*100)+'%';$('mileProgressText').textContent=Math.floor(frac*100)+'%';
+ if(mi>=.04&&sec>0){let pace=sec/mi;currentPace=pace;$('pace').textContent=fmt(pace);$('projected').textContent=fmt(pace);}
+ else{$('pace').textContent='—:—';$('projected').textContent='—:—';}
+ if(running&&!paused&&mi>=.04&&t>0){
+   const pace=sec/mi,delta=pace-t;
+   if(delta>8)setStatus('BEHIND TARGET · PICK UP THE PACE','behind');
+   else if(delta < -8)setStatus('AHEAD OF TARGET · CONTROLLED PACE','ahead');
+   else setStatus('ON TARGET PACE','');
+ } else if(!running)setStatus('READY WHEN YOU ARE','idle');
+ $('runState').textContent=running?(paused?'Paused':'Recording'):'Ready';
+}
+function renderSplits(){
+ $('splitCount').textContent=splits.length+' saved';
+ $('splits').innerHTML=splits.length?splits.map((s,i)=>`<div class="split"><span>Mile ${i+1}</span><strong>${fmt(s.seconds)}</strong><span class="muted">${s.delta===null?'First split':(s.delta<=0?Math.abs(s.delta)+' sec faster':s.delta+' sec slower')}</span></div>`).join(''):'<div class="empty">Completed miles will appear here automatically.</div>';
+}
+function onPosition(pos){
+ if(!running||paused)return;
+ const c=pos.coords;
+ if(c.accuracy>45){$('gpsMessage').textContent='GPS signal is still inaccurate. Move to an open area if possible.';return;}
+ const fix={lat:c.latitude,lon:c.longitude,time:pos.timestamp};
+ if(lastFix){
+  const d=haversine(lastFix,fix),dt=(fix.time-lastFix.time)/1000;
+  // Ignore implausible GPS jumps and tiny stationary drift.
+  if(dt>0&&d<Math.max(70,dt*8)&&d>2){
+   const old=distanceM;distanceM+=d;
+   let oldMile=Math.floor(old/1609.344),newMile=Math.floor(distanceM/1609.344);
+   while(newMile>oldMile){
+    const totalElapsed=elapsed(),splitSec=totalElapsed-lastSplitAt;
+    const delta=splits.length?Math.round(splitSec-splits[splits.length-1].seconds):null;
+    // Store each individual mile split, not cumulative elapsed time.
+    splits.push({seconds:Math.round(splitSec),cumulative:Math.round(totalElapsed),delta,at:new Date().toISOString()});
+    lastSplitAt=totalElapsed;oldMile++;renderSplits();
+    if(navigator.vibrate)navigator.vibrate([100,60,100]);
+   }
+  }
+ }
+ lastFix=fix;
+ $('gpsMessage').textContent='GPS connected · accuracy about '+Math.round(c.accuracy)+' m';
+ updateUI();
+}
+function startGPS(){
+ if(!('geolocation'in navigator)){setGPS('GPS unavailable');$('gpsMessage').textContent='This browser does not support GPS location.';return false;}
+ setGPS('Finding GPS…');
+ watchId=navigator.geolocation.watchPosition(onPosition,err=>{
+  setGPS('GPS issue');
+  $('gpsMessage').textContent=err.code===1?'Location permission was denied. Allow location access in browser settings and try again.':'Waiting for GPS signal. Check location services and try outdoors.';
+ },{enableHighAccuracy:true,maximumAge:1000,timeout:20000});
+ return true;
+}
+async function requestWakeLock(){try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen')}catch(e){}}
+function begin(){
+ if(running)return;
+ if(targetSeconds()<=0){alert('Enter a target mile time greater than zero.');return;}
+ running=true;paused=false;startAt=Date.now();elapsedBefore=0;distanceM=0;lastFix=null;splits=[];lastSplitAt=0;currentPace=null;
+ $('mainButton').textContent='■ FINISH RUN';$('mainButton').classList.add('finish');$('pauseButton').disabled=false;$('pauseButton').textContent='Pause';
+ startGPS();requestWakeLock();renderSplits();updateUI();timer=setInterval(updateUI,500);
+}
+function pause(){
+ if(!running)return;
+ if(!paused){elapsedBefore=elapsed();paused=true;if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;lastFix=null;$('pauseButton').textContent='Resume';setGPS('Paused');}
+ else{paused=false;startAt=Date.now();$('pauseButton').textContent='Pause';startGPS();requestWakeLock();}
+ updateUI();
+}
+function finish(){
+ if(!running)return;
+ const total=elapsed(),miles=distanceM/1609.344;
+ if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;clearInterval(timer);running=false;paused=false;
+ const partial=miles-Math.floor(miles);
+ const record={id:Date.now(),date:new Date().toISOString(),distance:miles,totalSeconds:Math.round(total),targetSeconds:targetSeconds(),splits:splits.slice(),partialMiles:partial};
+ if(miles>0.015){records.unshift(record);persist();renderHistory();}
+ $('mainButton').textContent='▶ START RUN';$('mainButton').classList.remove('finish');$('pauseButton').disabled=true;$('pauseButton').textContent='Pause';setGPS('GPS stopped');
+ $('gpsMessage').textContent='Run finished. '+(splits.length+' completed mile split(s) saved to this phone.');
+ updateUI();renderSplits();
+}
+function resetDisplay(){
+ if(running){alert('Finish the current run before resetting.');return;}
+ distanceM=0;elapsedBefore=0;splits=[];lastSplitAt=0;renderSplits();updateUI();$('gpsMessage').textContent='Ready for your next run.';
+}
+function renderHistory(){
+ const all=records.flatMap(r=>r.splits.map((s,i)=>({seconds:s.seconds,date:r.date,mile:i+1,runId:r.id})));
+ const best=all.length?Math.min(...all.map(x=>x.seconds)):null,avg=all.length?Math.round(all.reduce((a,x)=>a+x.seconds,0)/all.length):null;
+ const full=records.filter(r=>r.distance>=.99),bestRun=full.length?Math.min(...full.map(r=>r.totalSeconds)):null;
+ $('bestMile').textContent=best===null?'—:—':fmt(best);$('avgMile').textContent=avg===null?'—:—':fmt(avg);
+ $('totalMiles').textContent=records.reduce((a,r)=>a+r.distance,0).toFixed(2);$('bestRun').textContent=bestRun===null?'—:—':fmt(bestRun);$('runCount').textContent=records.length+' runs';
+ $('history').innerHTML=records.length?records.slice(0,12).map(r=>{
+  const date=new Date(r.date).toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+  const result=r.splits.length?`<div class="muted" style="margin-top:7px">${r.splits.map((s,i)=>'M'+(i+1)+' '+fmt(s.seconds)).join(' · ')}</div>`:'';
+  return `<div class="historyitem"><div class="row"><strong>${date}</strong><span class="tag">${r.distance.toFixed(2)} mi</span></div><div class="row" style="margin-top:7px"><span class="muted">Total time</span><strong>${fmt(r.totalSeconds)}</strong></div>${result}${r.partialMiles>.015?`<div class="muted" style="margin-top:5px">Partial distance: ${r.partialMiles.toFixed(2)} mi</div>`:''}</div>`;
+ }).join(''):'<div class="empty">Finish a run to start building your history.</div>';
+ drawChart(all.slice().reverse().slice(-20));
+}
+function drawChart(data){
+ const c=$('trend'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
+ if(!data.length){ctx.fillStyle='#9aabc2';ctx.font='14px system-ui';ctx.textAlign='center';ctx.fillText('Your completed mile times will appear here',w/2,h/2);return;}
+ const vals=data.map(x=>x.seconds),min=Math.min(...vals)-10,max=Math.max(...vals)+10,range=Math.max(20,max-min);
+ ctx.strokeStyle='#2a3a52';ctx.lineWidth=1;ctx.fillStyle='#9aabc2';ctx.font='11px system-ui';
+ for(let i=0;i<4;i++){let y=15+i*(h-40)/3;ctx.beginPath();ctx.moveTo(38,y);ctx.lineTo(w-10,y);ctx.stroke();ctx.fillText(fmt(Math.round(max-i*range/3)),3,y+4);}
+ ctx.strokeStyle='#37d39a';ctx.lineWidth=3;ctx.beginPath();
+ data.forEach((p,i)=>{let x=42+(w-58)*(data.length===1?.5:i/(data.length-1)),y=15+(max-p.seconds)/range*(h-40);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+ ctx.stroke();data.forEach((p,i)=>{let x=42+(w-58)*(data.length===1?.5:i/(data.length-1)),y=15+(max-p.seconds)/range*(h-40);ctx.fillStyle='#7db7ff';ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();});
+}
+$('mainButton').addEventListener('click',()=>running?finish():begin());
+$('pauseButton').addEventListener('click',pause);$('resetButton').addEventListener('click',resetDisplay);
+$('targetMin').addEventListener('input',()=>{updateUI()});$('targetSec').addEventListener('input',()=>{updateUI()});
+$('exportButton').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='milepace-running-history.json';a.click();URL.revokeObjectURL(url);
+});
+$('clearButton').addEventListener('click',()=>{if(running){alert('Finish your run before clearing history.');return;}if(confirm('Permanently delete all MilePace history stored in this browser? Export a backup first if you want to keep it.')){records=[];persist();renderHistory();}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running&&!paused)requestWakeLock();});
+renderHistory();updateUI();
+</script>
+</body>
+</html>
